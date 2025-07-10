@@ -5,42 +5,44 @@ import torch
 from torch.utils.data import DataLoader
 
 import os
+
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 import pickle
 import argparse
 import logging as log
 
 import models
 import importlib
-import train
+import train_original as train
 from dataset import Dataset
 import numpy as np
 import random
 import math
-
+from datetime import datetime
 
 parser = argparse.ArgumentParser(description='IEKT')
 parser.add_argument('--debug',          action='store_true',        help='log debug messages or not')
 parser.add_argument('--run_exist',      action='store_true',        help='run dir exists ok or not')
-parser.add_argument('--run_dir',        type=str,   default='run/1/', help='dir to save log and models')
+parser.add_argument('--run_dir',        type=str,   default='run/text_weight/', help='dir to save log and models')
 parser.add_argument('--data_dir',       type=str,   default='data/new_mini_09/') #assistment2009-2010
-parser.add_argument('--checkpoint_path',type=str,  default= 'none',   help='the path of checkpoint') 
+parser.add_argument('--checkpoint_path',type=str,  default= 'none',   help='the path of checkpoint')
 parser.add_argument('--log_every',      type=int,   default=0,      help='number of steps to log loss, do not log if 0')
 parser.add_argument('--eval_every',     type=int,   default=0,      help='number of steps to evaluate, only evaluate after each epoch if 0')
-parser.add_argument('--save_every',     type=int,   default=50,      help='number of steps to save model')
+parser.add_argument('--save_every',     type=int,   default=20,      help='number of steps to save model')
 parser.add_argument('--device',         type=int,   default=-1,      help='gpu device id, cpu if -1')
 parser.add_argument('--model',          type=str,   default='iekt',   help='run model')
-parser.add_argument('--n_layer',type=int,   default=1,      help='number of mlp hidden layers in decoder')
+parser.add_argument('--n_layer',type=int,   default=2,      help='number of mlp hidden layers in decoder')
 parser.add_argument('--dim',type=int,   default=64,     help='hidden size for nodes')
 parser.add_argument('--n_epochs',       type=int,   default=300,   help='number of epochs to train')
 parser.add_argument('--batch_size',     type=int,   default=32,      help='number of instances in a batch')
 parser.add_argument('--lr',             type=float, default=1e-3,   help='learning rate')
-parser.add_argument('--dropout',        type=float, default=0.0,   help='dropout') 
+parser.add_argument('--dropout',        type=float, default=0,   help='dropout')
 parser.add_argument('--seq_len',       type=int, default=200,   help='the length of the sequence') 
 parser.add_argument('--gamma',        type=float, default=0.93,   help='graph_type') 
 parser.add_argument('--cog_levels',        type=int, default=10,   help='the response action space for cognition estimation')
 parser.add_argument('--acq_levels',        type=int, default=10,   help='the response action space for  sensitivity estimation')
-parser.add_argument('--lamb',        type=float, default=40.0,   help='hyper parameter for loss')
-parser.add_argument('--decay',type=float, default=1e-6,   help='hyper parameter for decay') 
+parser.add_argument('--lamb',        type=float, default=40,   help='hyper parameter for loss')
+parser.add_argument('--decay',type=float, default=1e-6,   help='hyper parameter for decay')
 args = parser.parse_args() 
 
 if args.debug:
@@ -52,7 +54,8 @@ os.makedirs(args.run_dir, exist_ok=args.run_exist)
 log.basicConfig(
     format='%(asctime)s: %(message)s',
     datefmt='%m/%d %I:%M:%S %p', level=log.DEBUG if args.debug else log.INFO)
-log.getLogger().addHandler(log.FileHandler(os.path.join(args.run_dir, 'log.txt'), mode='w'))
+current_time = datetime.now().strftime("%H:%M:%S")
+log.getLogger().addHandler(log.FileHandler(os.path.join(args.run_dir, f'{current_time}_log.txt'), mode='w'))
 log.info('args: %s' % str(args))
 args.device = 'cpu' if args.device < 0 else 'cuda:%i' % args.device
 args.device = torch.device(args.device)
@@ -94,10 +97,20 @@ def preprocess():
 if __name__ == '__main__':
     loaders = preprocess()
     Model = getattr(models, args.model)
+    # 加载静态文本嵌入（来自 BERT）
+    exercise_bert_emb = np.load("exercise_embedding_matrix.npy")  # shape: [problem_num, 1024]
+    concept_bert_emb = np.load("concept_embedding_matrix.npy")  # shape: [concept_num, 1024]
+    exercise_bert_emb[0] = 0  # 第一个问题的嵌入向量置为0
+    concept_bert_emb[0] = 0  # 第一个知识点的嵌入向量置为0
+    # 转换为 tensor
+    exercise_bert_emb = torch.tensor(exercise_bert_emb, dtype=torch.float32)
+    concept_bert_emb = torch.tensor(concept_bert_emb, dtype=torch.float32)
     if args.checkpoint_path != 'none':
         model = torch.load(args.checkpoint_path, map_location = torch.device(args.device))
     else:
-        model = Model(args).to(args.device)
+        model = Model(args,exercise_bert_emb,concept_bert_emb).to(args.device)
+        # model = Model(args).to(args.device)
+
     log.info(str(vars(args)))
 
     train.train(model, loaders, args)

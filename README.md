@@ -1,18 +1,31 @@
 # Tracing Knowledge State with Individual Cognition and Acquisition Estimation
+
 Thanks for your interest! This repository is the implementation of IEKT, which is proposed in the paper "[Tracing Knowledge State with Individual Cognition and Acquisition Estimation](https://github.com/githubg0/iekt/blob/main/Tracing%20Knowledge%20State%20with%20Individual%20Cognition%20and%20Acquisition%20Estimation.pdf)". The paper is accepted by SIGIR 2021.
+
 # Datasets
-## ASS09 and ASS12: 
-You can download the original data in this [link](https://sites.google.com/site/assistmentsdata/home/assistment-2009-2010-data/skill-builder-data-2009-2010)
+
+## ASS09 and ASS12:
+
+You can download the original data in this [link](https://sites.google.com/site/assistmentsdata/home/assistment-2009-2010-data/skill-builder-·data-2009-2010)
+
 ## EdNet
+
 You can download the original data in this [link](https://github.com/riiid/ednet)
+
 ## Junyi
+
 You can download the original data in this [link](https://www.kaggle.com/junyiacademy/learning-activity-public-dataset-by-junyi-academy)
+
 # Run
+
 ```
 python main.py --run_dir runs/RUN_DIR
 ```
+
 # Citation
+
 You are more than welcome to cite our paper:
+
 ```
 @inproceedings{long2021tracing,
 	title={Tracing Knowledge State with Individual Cognition and Acquisition Estimation},
@@ -22,4 +35,5 @@ You are more than welcome to cite our paper:
 	organization={ACM}
 }
 ```
+
 If you have any question, please contact longting@sjtu.edu.cn

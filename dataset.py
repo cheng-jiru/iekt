@@ -110,8 +110,8 @@ class Dataset(data.Dataset):
         '''
         x_list = []
         y_list = []
-        last_show = [300] * self.concept_num
-        show_count = [0] * self.concept_num
+        last_show = [300] * self.concept_num # 知识点最后一次出现时间
+        show_count = [0] * self.concept_num #  知识点出现次数
         pre_response = 0
 
         for i in range(0, len(stu_records)):
@@ -125,13 +125,13 @@ class Dataset(data.Dataset):
                 operate = [0] #避免除0报错
             real_concepts_num = 0
             zero_filter = []
-            last_show_emb = [0] * self.show_len
-            show_count_emb = [0] * self.show_len
-            for s in skills:
+            last_show_emb = [0] * self.show_len # 知识点最后一次出现时间编码
+            show_count_emb = [0] * self.show_len # 知识点出现次数编码
+            for s in skills: # 知识点ID
                 if s != 0:
                     real_concepts_num += 1
                     zero_filter.append(1)
-                    if last_show[s] < self.show_len:
+                    if last_show[s] < self.show_len: #如果
                         last_show_emb[last_show[s]] = 1
                     if show_count[s] != 0:
                         if show_count[s] < self.show_len:
@@ -152,14 +152,14 @@ class Dataset(data.Dataset):
                 related_concept_matrix = 0
             
             x_list.append([
-                last_show_emb,
-                prob,
-                skills,
-                show_count_emb,
-                operate,
-                zero_filter,
-                problem_id,
-                related_concept_matrix
+                last_show_emb, # 知识点最后一次出现时间编码
+                prob,# 知识点one-hot编码
+                skills,# 原始知识点ID列表
+                show_count_emb,# 知识点出现次数编码
+                operate,# 回答动作（正确/错误）
+                zero_filter,# 有效知识点过滤
+                problem_id,# 原始问题ID
+                related_concept_matrix # 知识点关系矩阵（部分实现）
                 ])
             y_list.append(torch.tensor(response))
             
@@ -174,7 +174,7 @@ class Dataset(data.Dataset):
 
     def process(self):
 
-        self.prob_encode_dim = int(math.log(self.problem_number,2)) + 1
+        self.prob_encode_dim = int(math.log(self.problem_number,2)) + 1 # 目的是将问题id转化为二进制
         with open(self.path + 'history_' + self.split + '.pkl', 'rb') as fp:
             histories = pickle.load(fp)
         loader_len = len(histories.keys())
