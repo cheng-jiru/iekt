@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="robot@192.168.24.71:22 password (4)" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="cjr@58.198.176.192:22 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/cjr/python/iekt" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="cjr@58.198.176.192:22 password (2)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/cjr/python/iekt" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="robot@192.168.24.71:22 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/python/iekt" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="robot@192.168.24.71:22 password (2)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="robot@192.168.24.71:22 password (3)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="robot@192.168.24.71:22 password (4)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/data/cjr/project/iekt" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
