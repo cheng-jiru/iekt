@@ -279,9 +279,7 @@ def evaluate(model, loader, args):
     model.eval()
     eval_sigmoid = torch.nn.Sigmoid()
     y_list, prob_list, final_action = [], [], []
-
     for step, data in enumerate(loader):
-
         with torch.no_grad():
             x, y = batch_data_to_device(data, args.device)
         model.train()
@@ -295,9 +293,6 @@ def evaluate(model, loader, args):
             H = torch.zeros(data_len, args.concept_num - 1, args.dim).to(args.device)
         rt_x = torch.zeros(data_len, 1, args.dim * 2).to(args.device)
         for seqi in range(0, args.seq_len):
-            # v, concept_embeddings, attention_weights = model.get_ques_representation(
-            #     x[1][seqi][6], x[1][seqi][2], x[1][seqi][5], x[1][seqi][5].size()[0], h=h
-            # )
             v= model.get_ques_representation_ave(
                 x[1][seqi][6], x[1][seqi][2], x[1][seqi][5], x[1][seqi][5].size()[0]
             )
@@ -324,46 +319,7 @@ def evaluate(model, loader, args):
                 dim=1)
             out_x = torch.cat([out_x_groundtruth, out_x_logits], dim=1)
 
-            # # 把每个状态都单独进行控制，状态和题目表示公用一个
-            # h_v_by_concept = model.get_concept_representation(x[1][seqi][6], x[1][seqi][2], x[1][seqi][5],
-            #                                                   x[1][seqi][5].size()[0], h=h)
-            #
-            # # Step 1: 扩展为 [batch, max_concept, 1]
-            # groundtruth_expanded = out_operate_groundtruth.unsqueeze(2).repeat(1, h_v_by_concept.size(1),
-            #                                                                    h_v_by_concept.size(2))  # [batch, 1, 1]
-            #
-            # logits_expanded = out_operate_logits.unsqueeze(2).repeat(1, h_v_by_concept.size(1), h_v_by_concept.size(2))
-            #
-            # # Step 2: 执行与原来一样的拼接操作
-            # groundtruth_by_concept = torch.cat([
-            #     h_v_by_concept * groundtruth_expanded.float(),
-            #     h_v_by_concept * (1 - groundtruth_expanded).float()
-            # ], dim=-1)  # [batch, max_concept, dim*6]
-            #
-            # logits_by_concept = torch.cat([
-            #     h_v_by_concept * logits_expanded.float(),
-            #     h_v_by_concept * (1 - logits_expanded).float()
-            # ], dim=-1)  # [batch, max_concept, dim*6]
-            #
-            # # Step 3: 拼接 groundtruth 和 logits 特征
-            # out_x_by_concept = torch.cat([groundtruth_by_concept, logits_by_concept], dim=-1)  # [batch, max_concept, dim*12]
-            #
             ground_truth = x[1][seqi][4].squeeze(-1)
-            # # 修改：获取多知识点敏感度向量
-            # sensitivity_vectors, emb_actions, log_probs = model.predict_multi_sensitivity(
-            #     out_x_by_concept,  # 当前状态 [batch, dim*12]
-            #     concept_embeddings,  # 知识点嵌入 [batch, max_concepts, dim]
-            #     x[1][seqi][5]  # 知识点掩码 [batch, max_concepts]
-            # )
-            # # 使用注意力权重加权融合敏感度向量
-            # # attention_weights: [batch, max_concepts]
-            # # sensitivity_vectors: [batch, max_concepts, dim*2]
-            # # 扩展注意力权重维度以进行加权
-            # attn_weights_expanded = attention_weights.unsqueeze(-1)  # [batch, max_concepts, 1]
-            # fused_vector = torch.sum(sensitivity_vectors * attn_weights_expanded, dim=1)  # [batch, dim*2]
-
-            # # 使用融合的敏感度向量更新状态
-            # h = model.update_state(h, v, fused_vector, ground_truth.unsqueeze(1))
             flip_prob_emb = model.pi_sens_func(out_x)
 
             m = Categorical(flip_prob_emb)

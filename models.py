@@ -196,6 +196,12 @@ class iekt(nn.Module):
         next_p_state = self.gru_h(inputs, h)
         return next_p_state
 
+    def get_state_vector(self, h):
+        """
+        提取当前学生状态（用于作为 RL 的 observation）
+        """
+        return h.detach()
+
     def pi_sens_func(self, x, softmax_dim=1):  #
         return F.softmax(self.checker_emb(x), dim=softmax_dim)
 
