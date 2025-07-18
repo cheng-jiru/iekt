@@ -14,6 +14,7 @@ import logging as log
 import models
 import importlib
 import train_original as train
+import test_original as test
 from dataset import Dataset
 import numpy as np
 import random
@@ -23,7 +24,7 @@ from datetime import datetime
 parser = argparse.ArgumentParser(description='IEKT')
 parser.add_argument('--debug',          action='store_true',        help='log debug messages or not')
 parser.add_argument('--run_exist',      action='store_true',        help='run dir exists ok or not')
-parser.add_argument('--run_dir',        type=str,   default='run/text_weight/', help='dir to save log and models')
+parser.add_argument('--run_dir',        type=str,   default='run/state_weight/', help='dir to save log and models')
 parser.add_argument('--data_dir',       type=str,   default='data/new_mini_09/') #assistment2009-2010
 parser.add_argument('--checkpoint_path',type=str,  default= 'none',   help='the path of checkpoint')
 parser.add_argument('--log_every',      type=int,   default=0,      help='number of steps to log loss, do not log if 0')
@@ -94,6 +95,48 @@ def preprocess():
 
     return loaders
 
+def generate_single_step_demo(
+    problem_id: int,
+    skills: list,
+    answer: int = 1,
+    max_skills: int = 4,
+    problem_number: int = 99,
+    concept_num: int = 100,
+):
+    """
+    生成单个学生在某一时间步的输入特征 x。
+
+    参数：
+    - problem_id: 当前题目的 ID（例如 15）
+    - skills: 与该题关联的知识点 ID 列表（最多4个），如 [3, 10]
+    - answer: 答题结果（0/1），仿真时用预测值
+    - max_skills: 每题最多关联的知识点数量，默认为 4
+    - problem_number: 总题目数量，用于构造 x[7] 时确定维度
+    - concept_num: 总知识点数量，用于构造可忽略字段时使用
+
+    返回：
+    - x: 包含8个字段的列表，可直接用于模型
+    """
+
+    # 填充或截断知识点ID到 max_skills 长度
+    skills = skills[:max_skills] + [0] * (max_skills - len(skills))
+
+    # 掩码：非零为有效知识点
+    mask = [1 if s != 0 else 0 for s in skills]
+
+    # 只保留需要的字段，其余字段填 0（忽略）
+    x0 = torch.tensor(0., dtype=torch.float32)   # 知识点最后出现时间编码（忽略）
+    x1 = torch.tensor(0., dtype=torch.float32)  # 知识点one-hot编码（忽略）
+    x2 = torch.tensor([skills])              # 知识点 ID，(1, 4)
+    x3 = torch.tensor(0., dtype=torch.float32)   # 知识点出现次数编码（忽略）
+    x4 = torch.tensor([[answer]], dtype=torch.float32)           # 答题结果，(1, 1)
+    x5 = torch.tensor([mask], dtype=torch.float32)                # 有效知识点掩码，(1, 4)
+    x6 = torch.tensor([problem_id])          # 题目ID，(1,)
+    x7 = torch.tensor(0., dtype=torch.float32)   # 知识点关联矩阵（忽略）
+
+    return [[x0, x1, x2, x3, x4, x5, x6, x7]]
+
+
 if __name__ == '__main__':
     loaders = preprocess()
     Model = getattr(models, args.model)
@@ -111,6 +154,9 @@ if __name__ == '__main__':
         model = Model(args,exercise_bert_emb,concept_bert_emb).to(args.device)
         # model = Model(args).to(args.device)
 
-    log.info(str(vars(args)))
-
+    # log.info(str(vars(args)))
+    # text_data=generate_single_step_demo(12,[1,4],)
+    # # 把text_data放到gpu上
+    #
     train.train(model, loaders, args)
+    # print(test.test_single_student(model, text_data, args))

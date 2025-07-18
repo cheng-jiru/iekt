@@ -43,6 +43,7 @@ class iekt(nn.Module):
         self.show_index = torch.tensor(showi0).to(args.device)
         self.concept_emb = nn.Parameter(torch.randn(self.concept_num - 1, args.dim).to(args.device), requires_grad=True)
         self.sigmoid = torch.nn.Sigmoid()
+        self.attn = nn.MultiheadAttention(embed_dim=args.dim, num_heads=1, batch_first=True) # 注意力层
         # self.attention_layer = nn.Sequential(
         #     nn.Linear(args.dim * 2, 64),  # h与知识点嵌入拼接后维度
         #     nn.Tanh(),
@@ -122,23 +123,12 @@ class iekt(nn.Module):
         return v, related_concepts, attention_weights
 
     def get_ques_representation_ave(self, prob_ids, related_concept_index, filter0, data_len, ):
-        # concepts_cat = torch.cat(
-        #     [torch.zeros(1, self.node_dim).to(self.device),
-        #      self.concept_emb],
-        #     dim=0).unsqueeze(0).repeat(data_len, 1, 1)  # concepts_cat:[batch, concept_num, dim]
+
         reduced_prob_emb = self.text_proj(self.exercise_text_emb)
         reduced_concept_emb = self.text_proj(self.concept_text_emb)
         concepts_cat = reduced_concept_emb.unsqueeze(0).repeat(data_len, 1, 1)  # concepts_cat:[batch, concept_num, dim]
         r_index = self.show_index[0: data_len].unsqueeze(1).repeat(1, self.max_concept)  # [batch, max_concept]
         related_concepts = concepts_cat[r_index, related_concept_index, :]
-        # filter_sum = torch.sum(filter0, dim=1)
-        #
-        # div = torch.where(filter_sum == 0,
-        #                   torch.tensor(1.0).to(self.device),
-        #                   filter_sum
-        #                   ).unsqueeze(1).repeat(1, self.node_dim)
-        #
-        # concept_level_rep = torch.sum(related_concepts, dim=1) / div
 
         question_embs = self.exercise_text_emb[prob_ids]  # [batch, emb_dim]
         concept_embs = self.concept_text_emb  # [concept_num, emb_dim]
@@ -153,12 +143,6 @@ class iekt(nn.Module):
             dim=1
         )  # [batch, dim]
         item_emb = reduced_prob_emb[prob_ids]
-        # prob_cat = torch.cat([
-        #     torch.zeros(1, self.node_dim).to(self.device),
-        #     self.prob_emb], dim=0)
-        #
-        # item_emb = prob_cat[prob_ids]
-
         v = torch.cat(
             [item_emb,concept_level_rep],
             dim=1)  # V: [batch, dim*2]
@@ -168,7 +152,7 @@ class iekt(nn.Module):
         return F.softmax(self.select_preemb(x), dim=softmax_dim)
 
     def obtain_v(self, this_input, h, x, emb):
-        last_show, problem, related_concept_index, show_count, operate, filter0, prob_ids, related_concept_matrix = this_input
+        _, _, related_concept_index, _, operate, filter0, prob_ids, _ = this_input
 
         data_len = operate.size()[0]
 

@@ -39,11 +39,20 @@ def train(model, loaders, args):
             p_action_list, pre_state_list, emb_action_list, op_action_list, actual_label_list, states_list, reward_list, predict_list, ground_truth_list = [], [], [], [], [], [], [], [], []
             log_probs_list, mask_list, attn_weights_list = [], [], []
             rt_x = torch.zeros(data_len, 1, args.dim * 2).to(args.device)
+            h_history = []
             for seqi in range(0, args.seq_len):  # 每个时间步
                 # 数据结构中x[1][seqi] = [ques_id, prob_id, related_concept_index, filter0, out_operate_groundtruth, prob_id, ques_representation]
                 # v, concept_embeddings, attention_weights = model.get_ques_representation_ave(
                 #     x[1][seqi][6], x[1][seqi][2], x[1][seqi][5], x[1][seqi][5].size()[0], h=h
                 # )  # x[1][seqi][6] prob_id,题目id，x[1][seqi][2]题目关联矩阵,x[1][seqi][5]这个是用来表示，知识点的掩码表示，有就是1，没有就是0
+                h_history.append(h.unsqueeze(1))  # 每次将 h 加入历史 [batch, 1, dim]
+                hist_h_tensor = torch.cat(h_history, dim=1)  # [batch, t, dim]
+                # 当前 h 作为 query，做 attention
+                query = h.unsqueeze(1)  # [batch, 1, dim]
+                h_attn, _ = model.attn(query, hist_h_tensor, hist_h_tensor)  # [batch, 1, dim]
+                h = h_attn.squeeze(1)  # [batch, dim]
+
+
                 v = model.get_ques_representation_ave(
                     x[1][seqi][6], x[1][seqi][2], x[1][seqi][5], x[1][seqi][5].size()[0])
 
@@ -286,13 +295,15 @@ def evaluate(model, loader, args):
         data_len = len(x[0])
         h = torch.zeros(data_len, args.dim).to(args.device)
         batch_probs, uni_prob_list, actual_label_list, states_list, reward_list = [], [], [], [], []
-        H = None
-        if 'eernna' in args.model:
-            H = torch.zeros(data_len, 1, args.dim).to(args.device)
-        else:
-            H = torch.zeros(data_len, args.concept_num - 1, args.dim).to(args.device)
         rt_x = torch.zeros(data_len, 1, args.dim * 2).to(args.device)
+        h_history = []
         for seqi in range(0, args.seq_len):
+            h_history.append(h.unsqueeze(1))  # 每次将 h 加入历史 [batch, 1, dim]
+            hist_h_tensor = torch.cat(h_history, dim=1)  # [batch, t, dim]
+            # 当前 h 作为 query，做 attention
+            query = h.unsqueeze(1)  # [batch, 1, dim]
+            h_attn, _ = model.attn(query, hist_h_tensor, hist_h_tensor)  # [batch, 1, dim]
+            h = h_attn.squeeze(1)  # [batch, dim]
             v= model.get_ques_representation_ave(
                 x[1][seqi][6], x[1][seqi][2], x[1][seqi][5], x[1][seqi][5].size()[0]
             )
