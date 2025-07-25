@@ -70,8 +70,8 @@ class iekt(nn.Module):
         #     [torch.zeros(1, self.node_dim).to(self.device),
         #      self.concept_emb],
         #     dim=0).unsqueeze(0).repeat(data_len, 1, 1)  # concepts_cat:[batch, concept_num, dim]
-        reduced_prob_emb = self.text_proj(self.exercise_text_emb)
-        reduced_concept_emb = self.text_proj(self.concept_text_emb)
+        reduced_prob_emb = self.exercise_text_emb
+        reduced_concept_emb = self.concept_text_emb
         concepts_cat = reduced_concept_emb.unsqueeze(0).repeat(data_len, 1, 1)  # concepts_cat:[batch, concept_num, dim]
         r_index = self.show_index[0: data_len].unsqueeze(1).repeat(1, self.max_concept)  # [batch, max_concept]
         related_concepts = concepts_cat[r_index, related_concept_index, :]
@@ -124,8 +124,8 @@ class iekt(nn.Module):
 
     def get_ques_representation_ave(self, prob_ids, related_concept_index, filter0, data_len, ):
 
-        reduced_prob_emb = self.text_proj(self.exercise_text_emb)
-        reduced_concept_emb = self.text_proj(self.concept_text_emb)
+        reduced_prob_emb = self.exercise_text_emb
+        reduced_concept_emb = self.concept_text_emb
         concepts_cat = reduced_concept_emb.unsqueeze(0).repeat(data_len, 1, 1)  # concepts_cat:[batch, concept_num, dim]
         r_index = self.show_index[0: data_len].unsqueeze(1).repeat(1, self.max_concept)  # [batch, max_concept]
         related_concepts = concepts_cat[r_index, related_concept_index, :]
@@ -291,8 +291,8 @@ class iekt(nn.Module):
         #     [torch.zeros(1, self.node_dim).to(self.device), self.concept_emb],
         #     dim=0
         # ).unsqueeze(0).repeat(data_len, 1, 1)  # [batch, concept_num, dim]
-        reduced_prob_emb = self.text_proj(self.exercise_text_emb)
-        reduced_concept_emb = self.text_proj(self.concept_text_emb)
+        reduced_prob_emb = self.exercise_text_emb
+        reduced_concept_emb = self.concept_text_emb
         concepts_cat = reduced_concept_emb.unsqueeze(0).repeat(data_len, 1, 1)
         r_index = self.show_index[0: data_len].unsqueeze(1).repeat(1, self.max_concept)  # [batch, max_concept]
         related_concepts = concepts_cat[r_index, related_concept_index, :]  # [batch, max_concept, dim]

@@ -24,7 +24,7 @@ from datetime import datetime
 parser = argparse.ArgumentParser(description='IEKT')
 parser.add_argument('--debug',          action='store_true',        help='log debug messages or not')
 parser.add_argument('--run_exist',      action='store_true',        help='run dir exists ok or not')
-parser.add_argument('--run_dir',        type=str,   default='run/state_weight/', help='dir to save log and models')
+parser.add_argument('--run_dir',        type=str,   default='run/h_number_graph/', help='dir to save log and models')
 parser.add_argument('--data_dir',       type=str,   default='data/new_mini_09/') #assistment2009-2010
 parser.add_argument('--checkpoint_path',type=str,  default= 'none',   help='the path of checkpoint')
 parser.add_argument('--log_every',      type=int,   default=0,      help='number of steps to log loss, do not log if 0')
@@ -33,7 +33,7 @@ parser.add_argument('--save_every',     type=int,   default=20,      help='numbe
 parser.add_argument('--device',         type=int,   default=-1,      help='gpu device id, cpu if -1')
 parser.add_argument('--model',          type=str,   default='iekt',   help='run model')
 parser.add_argument('--n_layer',type=int,   default=2,      help='number of mlp hidden layers in decoder')
-parser.add_argument('--dim',type=int,   default=64,     help='hidden size for nodes')
+parser.add_argument('--dim',type=int,   default=99,     help='hidden size for nodes')
 parser.add_argument('--n_epochs',       type=int,   default=300,   help='number of epochs to train')
 parser.add_argument('--batch_size',     type=int,   default=32,      help='number of instances in a batch')
 parser.add_argument('--lr',             type=float, default=1e-3,   help='learning rate')
@@ -141,8 +141,8 @@ if __name__ == '__main__':
     loaders = preprocess()
     Model = getattr(models, args.model)
     # 加载静态文本嵌入（来自 BERT）
-    exercise_bert_emb = np.load("exercise_embedding_matrix.npy")  # shape: [problem_num, 1024]
-    concept_bert_emb = np.load("concept_embedding_matrix.npy")  # shape: [concept_num, 1024]
+    exercise_bert_emb = np.load("exercise_embedding_graph.npy")  # shape: [problem_num, 1024]
+    concept_bert_emb = np.load("concept_embedding_graph.npy")  # shape: [concept_num, 1024]
     exercise_bert_emb[0] = 0  # 第一个问题的嵌入向量置为0
     concept_bert_emb[0] = 0  # 第一个知识点的嵌入向量置为0
     # 转换为 tensor

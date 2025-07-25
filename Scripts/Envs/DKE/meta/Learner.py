@@ -8,8 +8,8 @@ import copy
 import os
 import numpy as np
 from Scripts.Envs.meta import MetaLearner, MetaInfinityLearnerGroup
-
-
+from utils.graph import build_learning_chains_best_cover
+from Scripts.Envs.DKE.meta.ChainTracker import ChainTracker
 __all__ = ["Learner", "LearnerGroup"]
 
 
@@ -17,16 +17,21 @@ class Learner(MetaLearner):
     def __init__(self,
                  initial_log,
                  learning_target: set,
+                 concept_graph,  # <- 加入图结构
                  _id=None,
                  seed=None):
         super(Learner, self).__init__(user_id=_id)
 
         # info of learner：state/target/knowledge_structure/logs
+        # 学习目标
         self._target = learning_target
         self._logs = initial_log
-        self._state = []
+        self._state = []  # 掌握状态向量，在外部强化学习中维护更新
         self.random_state = np.random.RandomState(seed)
 
+        # ===== 加入链结构推荐模块 =====
+        self._chains = build_learning_chains_best_cover(concept_graph, learning_target)
+        self._chain_tracker = ChainTracker(self._chains)
     def update_logs(self, logs):
         self._logs = logs
 
@@ -39,7 +44,12 @@ class Learner(MetaLearner):
         }
 
     def learn(self, learning_item, score):
+        """
+        记录学习行为，并更新链指针
+        """
         self._logs.append([learning_item, score])
+        # 可选：更新 mastery 状态向量中的对应值（由外部控制）
+        self._chain_tracker.update(learning_item)  # 更新链状态（指针往后移）
 
     @property
     def state(self):

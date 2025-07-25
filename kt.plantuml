@@ -1,0 +1,132 @@
+@startuml
+skinparam style strict
+skinparam defaultTextAlignment center
+
+title 多知识点推荐系统架构（强化学习 + 异构图）
+
+' ===================== 图结构输入 =====================
+package "输入图结构（异构图）" {
+  [题目节点 Q1]
+  [题目节点 Q2]
+  [题目节点 Q3]
+
+  [知识点 K1]
+  [知识点 K2]
+  [知识点 K3]
+  [知识点 K4]
+
+  Q1 --> K1 : 覆盖
+  Q1 --> K2 : 覆盖
+  Q2 --> K2 : 覆盖
+  Q2 --> K3 : 覆盖
+  Q3 --> K4 : 覆盖
+
+  K1 --> K2 : 先后继（有依赖）
+  ' 注意：K2 和 K3 没有关联，表示平级知识点
+  K2 --> K4 : 先后继
+}
+
+' ===================== 学生状态 =====================
+package "学生状态" {
+  [目标知识点集合 {K1, K3, K4}] as TargetSet
+  [已完成题目集合 DoneQ]
+}
+
+' ===================== 层次策略 =====================
+package "高层策略 H-Agent" {
+  [目标链划分模块] as ChainDiv
+  [策略 π_H：选择目标子图链] as HPolicy
+}
+
+package "中层策略 C-Agent" {
+  [策略 π_C：选择当前目标知识点] as CPolicy
+}
+
+package "低层策略 I-Agent" {
+  [决策：是否推复合题？] as CombineDecision
+  [策略 π_I：推荐具体题目] as IPolicy
+}
+
+' ===================== 推荐输出 =====================
+package "推荐器输出" {
+  [推荐题目 Qx]
+}
+
+' ===================== 流程连接 =====================
+TargetSet --> ChainDiv
+ChainDiv --> HPolicy
+HPolicy --> CPolicy
+CPolicy --> CombineDecision
+CombineDecision --> IPolicy
+IPolicy --> [推荐题目 Qx]
+
+' 支持模块访问异构图结构
+[题目节点 Q1] ..> IPolicy : 可选题集
+[知识点 K1] ..> CPolicy : 当前目标
+
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam rectangle {
+  RoundCorner 15
+  StereotypeFontColor #2e3a59
+  FontSize 12
+}
+title 强化学习推荐系统总体架构图（含异构图简易版）
+
+actor "学生\nStudent" as Student
+
+' === 环境与图结构 ===
+rectangle "环境 Environment" {
+  rectangle "学生状态\n H_st" as State
+  rectangle  "目标知识点集合\nTarget Concepts" as TargetConcepts
+  rectangle "知识图谱\nHeterogeneous Graph" {
+    rectangle "知识点节点\nConcepts" as Concepts
+    rectangle "题目节点\nExercises" as Exercises
+    Concepts --> Exercises : 多对多\n关联关系
+    Concepts --> Concepts : 先后继\nPrerequisite
+  }
+}
+
+' === Agent 1: 推荐知识点 ===
+rectangle "知识点推荐 Agent\n(KP Recommender Agent)" {
+  rectangle "策略网络\nPolicy Net " as KPPolicy
+  rectangle "动作 Action\n推荐知识点集合" as KPAction
+  rectangle "奖励 Reward_KP\n" as RewardKP
+}
+
+' === Agent 2: 推荐题目 ===
+rectangle "题目推荐 Agent\n(Exercise Recommender Agent)" {
+  rectangle "策略网络\nPolicy Net " as ExPolicy
+  rectangle "动作 Action\n推荐题目" as ExAction
+  rectangle "奖励 Reward_Ex\n" as RewardEx
+}
+
+' === 交互流程 ===
+Student --> State : 学习状态反馈
+State --> KPPolicy : 输入学生状态
+TargetConcepts --> KPPolicy : 输入学习目标知识点集合
+KPPolicy --> KPAction : 输出知识点集合而非单个知识点
+KPAction --> ExPolicy : 输入推荐知识点
+ExPolicy --> ExAction : 输出题目集合
+ExAction --> Student : 推送推荐题目
+Student --> RewardKP : 回传知识点相关奖励
+Student --> RewardEx : 回传题目相关奖励
+State --> ExPolicy : 输出知识点集合而非单个知识点
+
+RewardKP --> KPPolicy : 奖励信号
+RewardEx --> ExPolicy : 奖励信号
+
+' === 图结构作为输入 ===
+Concepts --> KPAction : 提供知识点图结构,过滤动作
+Exercises --> ExPolicy : 提供题目/关联结构
+
+@enduml
+
+
+
+
+
+
+
