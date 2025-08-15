@@ -108,11 +108,9 @@ class KtAgent():
 
 def generate_single_step_demo(
         problem_id: int,
+        answer: int,
         skills: list,
-        answer: int = 1,
         max_skills: int = 4,
-        problem_number: int = 99,
-        concept_num: int = 100,
 ):
     """
     生成单个学生在某一时间步的输入特征 x。
@@ -150,7 +148,7 @@ def generate_single_step_demo(
 
 if __name__ == '__main__':
     model_path = 'run/h_number_graph/best_model.pt'
-    text_data = generate_single_step_demo(12, [1, 4], )
+    text_data = generate_single_step_demo(12, 1,[1, 4], )
     agent = KtAgent(model_path, 4, dim=99)
     prob_list, state_list, pred_label_list = agent.test_single_student(text_data)
     print("预测概率列表:", prob_list)

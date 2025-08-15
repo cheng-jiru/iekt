@@ -12,11 +12,11 @@ class ChainTracker:
         """
         返回当前所有可以推荐的知识点（每个链的指针位置）
         """
-        actions = []
+        actions = set()
         for i, p in enumerate(self.pointers):
             if p < len(self.chains[i]):
-                actions.append(self.chains[i][p])
-        return actions
+                actions.add(self.chains[i][p])
+        return list(actions)
 
     def update(self, recommended_concept):
         """

@@ -7,13 +7,19 @@ import networkx as nx
 import pandas as pd
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import os
 
+# 当前文件绝对路径
+file_path = os.path.abspath(__file__)
+# 当前文件所在目录
+dir_path = os.path.dirname(file_path)
 
-def build_graph(file_pata):
+def build_graph():
     """
     构建知识点之间的图
     """
-    df = pd.read_csv(file_pata)
+    file_path = os.path.join(dir_path,"../KC_Relationships_mapped.csv")
+    df = pd.read_csv(file_path)
     concept_graph = nx.DiGraph()
     for _, row in df.iterrows():
         concept_graph.add_edge(row['from_knowledgecomponent_id'], row['to_knowledgecomponent_id'])
@@ -137,7 +143,7 @@ if __name__ == '__main__':
 
     # 示例知识结构图
     G = build_graph("../KC_Relationships_mapped.csv")
-    target_concepts = [55, 12, 83, 76, 16,3]
+    target_concepts = [55, 12, 83, 76, 16, 3]
     print(G.number_of_nodes())
     chains = build_learning_chains_best_cover(G, target_concepts)
     print("生成的学习链：", chains)
