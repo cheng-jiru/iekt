@@ -8,7 +8,8 @@ from Scripts.Envs.meta import TraitScorer
 
 
 class KESScorer(TraitScorer):
-    def response_function(self, user_trait, item_trait, *args, **kwargs):
+    def response_concept_function(self, user_trait, item_trait, *args, **kwargs):
+        # 这里的item是知识点
         # return 1 if user_trait[item_trait] >= 0.55 else 0
         # return 1 if user_trait[item_trait] >= 0.67 else 0
         # return 1 if user_trait[item_trait] >= 0.73 else 0

@@ -137,6 +137,28 @@ class PPO:
         return action, torlerance, diff
 
 
+    def take_action_by(self, state, candidates):
+        threshhold=0.5
+        state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+        probs = self.actor(state_tensor)
+        candidate_probs = probs.gather(dim=1, index=torch.tensor(candidates).long().view(1, -1))
+        candidate_probs = candidate_probs.view(-1).detach().cpu().numpy()
+        candidate_probs = candidate_probs / candidate_probs.sum()  # 归一化成概率分布
+
+        k=max(len(candidates),4)
+        # 不放回采样 k 个动作
+        chosen_indices = np.random.choice(len(candidates), size=k, replace=False, p=candidate_probs)
+        actions = [candidates[i] for i in chosen_indices]
+
+        torlerances = []
+        for action in actions:
+            next_mastery = float(state[0][action])
+            torlerance = 1 if next_mastery > threshhold else 5
+            torlerances.append(torlerance)
+
+        return actions, torlerances
+
+
     def learn(self):
         states, actions, rewards, next_states, dones = self.memory.get(self.batch_size,self.device)
 

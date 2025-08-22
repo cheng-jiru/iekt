@@ -7,6 +7,7 @@ import sys
 import random
 import collections
 
+
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(PolicyNet, self).__init__()
@@ -17,10 +18,12 @@ class PolicyNet(torch.nn.Module):
         x = F.relu(self.fc1(x))
         return F.softmax(self.fc2(x), dim=1)
 
+
 class PolicyNetWithItemEmbedding(torch.nn.Module):
     """
     嵌入一下题目，使用题目embedding来计算概率分布
     """
+
     def __init__(self, state_dim, hidden_dim, exercise_embed):
         super().__init__()
         self.state_encoder = torch.nn.Sequential(
@@ -31,11 +34,12 @@ class PolicyNetWithItemEmbedding(torch.nn.Module):
         self.query_proj = torch.nn.Linear(hidden_dim, exercise_embed.size(1))  # 投影到同一个维度
 
     def forward(self, x):
-        h = self.state_encoder(x)                    # [batch, hidden]
-        q = self.query_proj(h)                       # [batch, d]
+        h = self.state_encoder(x)  # [batch, hidden]
+        q = self.query_proj(h)  # [batch, d]
         logits = torch.matmul(q, self.exercise_embed.T)  # [batch, num_ex]
         probs = F.softmax(logits, dim=-1)
         return probs
+
 
 class ValueNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim):
@@ -66,8 +70,7 @@ class Memory:
     def set(self, data):
         self.buffer.append(data)
 
-
-    def get(self, batch_size,device):
+    def get(self, batch_size, device):
         mini_batch = random.sample(self.buffer, batch_size)
         state = torch.tensor([data.P_state for data in mini_batch], dtype=torch.float).to(device)
         action = torch.tensor([data.ques for data in mini_batch], dtype=torch.long).to(device)
@@ -79,7 +82,7 @@ class Memory:
 
 class ActorCritic:
     def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr,
-                 gamma, know_item, device,batch_size):
+                 gamma, know_item, device, batch_size):
 
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
@@ -91,15 +94,14 @@ class ActorCritic:
         self.gamma = gamma
         self.device = device
 
-        self.know_item = know_item
+        self.know_item = know_item  # 知识点对应的题目关系
 
         self.memory_counter = 0
         self.memory = Memory(capacity=5000)
 
         self.batch_size = batch_size
 
-
-    def candidate_ques(self,know, init_diff):
+    def candidate_ques(self, know, init_diff):
         try:
             all_ques = self.know_item[know]
         except:
@@ -111,35 +113,26 @@ class ActorCritic:
                 closest_difficulty = item
         return closest_difficulty
 
-    def take_action(self, know, state, init_diff=None):
-        if init_diff is not None:
-            ques = self.candidate_ques(know,init_diff)
-            ques = int(ques.id)
-        else:
-            probs = self.actor(state)
-            candidates = []
-            try:
-                all_ques = self.know_item[know]
-            except:
-                all_ques = self.know_item[know[0]]
-            for item in all_ques:
-                candidates.append(int(item.id))
-            candidate_probs = probs.gather(dim=1, index=torch.Tensor(candidates).long().view(1, -1))
-            ques = int(random.choices(candidates, weights=candidate_probs.view(-1).detach().numpy())[0])
+    def take_action(self, know_list, state, ):
+        state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+        probs = self.actor(state_tensor)
+        candidates = []
+        for k_id in know_list:
+            if k_id in self.know_item:
+                for item in self.know_item[k_id]:
+                    candidates.append(int(item.id))
+        candidates = list(set(candidates))  # 去重，避免重复题目
+        candidate_probs = probs.gather(dim=1, index=torch.Tensor(candidates).long().view(1, -1))
+        ques = int(random.choices(candidates, weights=candidate_probs.view(-1).detach().numpy())[0])
         return ques
-
 
     def store_transition(self, data):
         self.memory.set(data)
         self.memory_counter += 1
 
-
-
     def learn(self):
-
-        states, actions, rewards, next_states, dones = self.memory.get(self.batch_size,self.device)
-
-        td_target = rewards + self.gamma * self.critic(next_states) * (1 -dones)
+        states, actions, rewards, next_states, dones = self.memory.get(self.batch_size, self.device)
+        td_target = rewards + self.gamma * self.critic(next_states) * (1 - dones)
         td_delta = td_target - self.critic(states)
         log_probs = torch.log(torch.gather(self.actor(states).squeeze(1), 1, actions.unsqueeze(-1).long()))
 

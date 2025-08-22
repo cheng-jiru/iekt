@@ -35,11 +35,10 @@ class KtAgent():
     def __init__(self, model_path, device, dim):
         super(KtAgent, self).__init__()
         self.model = torch.load(model_path, map_location=torch.device(device))
-        self.dim=dim
+        self.dim = dim
         self.device = device
 
-
-    def test_single_student(self, single_seq_data):
+    def test_single_student(self, single_seq_data,h=None,init_len=0):
         """
         single_seq_data: 单个学生的单条或序列数据，格式要跟训练时输入格式对应，比如：
                          [(question_id, other_feats..., ground_truth), ...]
@@ -54,14 +53,16 @@ class KtAgent():
         eval_sigmoid = torch.nn.Sigmoid()
 
         # 初始化状态
-        h = torch.zeros(1, self.dim).to(device)
-
+        if h is not None:
+            h = h.to(device)
+        else:
+            h = torch.zeros(1, self.dim).to(device)
         prob_list = []
         state_list = []
         pred_label_list = []
 
         seq_len = len(single_seq_data)
-        for seqi in range(seq_len):
+        for seqi in range(init_len,seq_len):
             # 取出当前时间步的8个特征并迁移到目标 device
             timestep = [x.to(device) for x in single_seq_data[seqi]]
             ques_id = timestep[6]
@@ -79,18 +80,24 @@ class KtAgent():
             m = Categorical(flip_prob_emb)
             emb_ap = m.sample()
             emb_p = self.model.cog_matrix[emb_ap, :]
-            rt_x = torch.zeros(1, 1, self.dim* 2).to(device)
+            rt_x = torch.zeros(1, 1, self.dim * 2).to(device)
             h_v, v, logits, rt_x = self.model.obtain_v(timestep, h, rt_x, emb_p)
             prob = eval_sigmoid(logits)
-
+            out_operate_groundtruth =timestep[4]
+            out_x_groundtruth = torch.cat([
+                h_v.mul(out_operate_groundtruth.repeat(1, h_v.size()[-1]).float()),
+                h_v.mul((1 - out_operate_groundtruth).repeat(1, h_v.size()[-1]).float())],
+                dim=1)
             out_operate_logits = (prob > 0.5).float()
             out_x_logits = torch.cat([
                 h_v.mul(out_operate_logits.repeat(1, h_v.size()[-1]).float()),
                 h_v.mul((1 - out_operate_logits).repeat(1, h_v.size()[-1]).float())
             ], dim=1)
+            if init_len == 0:
 
-            out_x = torch.cat([out_x_logits, out_x_logits], dim=1)  # 强化学习不能用真实的结果，必须以预测的当成环境的结果
-
+                out_x = torch.cat([out_x_groundtruth, out_x_logits], dim=1)
+            else:
+                out_x = torch.cat([out_x_logits, out_x_logits], dim=1)# 强化学习不能用真实的结果，必须以预测的当成环境的结果
             flip_prob_emb = self.model.pi_sens_func(out_x)
             m = Categorical(flip_prob_emb)
             emb_a = m.sample()
@@ -102,8 +109,11 @@ class KtAgent():
             prob_list.append(prob.item())
             state_list.append(h.detach().cpu().clone())
             pred_label_list.append(int(out_operate_logits.item()))
+        state_tensor = state_list[-1]  # 取最后一个时刻的状态
+        state_norm = torch.sigmoid(state_tensor)
 
-        return prob_list, state_list, pred_label_list
+
+        return prob_list[-1], state_norm, pred_label_list[-1]
 
 
 def generate_single_step_demo(
@@ -146,11 +156,14 @@ def generate_single_step_demo(
     return [[x0, x1, x2, x3, x4, x5, x6, x7]]
 
 
+
+
+
 if __name__ == '__main__':
     model_path = 'run/h_number_graph/best_model.pt'
-    text_data = generate_single_step_demo(12, 1,[1, 4], )
+    text_data = generate_single_step_demo(12, 1, [1, 4], )
     agent = KtAgent(model_path, 4, dim=99)
     prob_list, state_list, pred_label_list = agent.test_single_student(text_data)
     print("预测概率列表:", prob_list)
-    print("预测状态列表:", state_list)
+    print("预测状态列表:", state_list.squeeze(0).tolist() )
     print("预测标签列表:", pred_label_list)

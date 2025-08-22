@@ -18,6 +18,7 @@ file_path = os.path.abspath(__file__)
 # 当前文件所在目录
 dir_path = os.path.dirname(file_path)
 
+
 class Learner(MetaLearner):
     def __init__(self,
                  initial_log,
@@ -31,7 +32,7 @@ class Learner(MetaLearner):
         self._logs = initial_log
         self._state = []  # 掌握状态向量，在外部强化学习中维护更新
         self.random_state = np.random.RandomState(seed)
-
+        self.init_len = len(initial_log)
         # ===== 加入链结构推荐模块 =====
         concept_graph = build_graph()
         self._chains = build_learning_chains_best_cover(concept_graph, learning_target)
@@ -47,15 +48,14 @@ class Learner(MetaLearner):
             "logs": self._logs,
             "target": self.target,
             "chains": self._chains,
+            "init_len": self.init_len
         }
 
-    def learn(self, learning_item, score,related_knowledge=[]):
-        """
-        记录学习行为，并更新链指针，
-        """
-        self._logs.append([learning_item, score,related_knowledge])
-        # 可选：更新 mastery 状态向量中的对应值（由外部控制）
-        self._chain_tracker.update(learning_item)  # 更新链状态（指针往后移）
+    def learn(self, learning_item, score=None, related_knowledge=[]):
+        self._logs.append([learning_item, score, related_knowledge])
+
+    def update_concept(self, concept_id):
+        self._chain_tracker.update(concept_id)  # 更新链状态（指针往后移）
 
     @property
     def state(self):
@@ -75,7 +75,7 @@ class Learner(MetaLearner):
 class LearnerGroup(MetaInfinityLearnerGroup):
     def __init__(self, dataRec_path, seed=None):
         super(LearnerGroup, self).__init__()
-        self.data_path = os.path.join(dir_path,"../meta",dataRec_path)
+        self.data_path = os.path.join(dir_path, "../meta", dataRec_path)
         self.random_state = np.random.RandomState(seed)
         with open(self.data_path, 'r', encoding="utf-8") as f:
             self.datatxt = f.readlines()
@@ -102,13 +102,15 @@ class LearnerGroup(MetaInfinityLearnerGroup):
 
 if __name__ == '__main__':
     learner_group = LearnerGroup("converted_sequences_with_kc.jsonl", seed=42)
-    for _ in range(5):
+    for _ in range(1):
         learner = next(learner_group)
-        print("Learner ID:", learner.id)
-        print("Initial Logs:", learner._logs)
         print("Learning Target:", learner._target)
         # 模拟学习一个知识点
         if learner._chains:
             first_chain = learner._chains
-            actions=learner._chain_tracker.get_available_actions()
+            actions = learner._chain_tracker.get_available_actions()
             print("Available Actions:", actions)
+            action = actions[0]
+            learner._chain_tracker.update(action)
+            actions = learner._chain_tracker.get_available_actions()
+            print("Available Actions after learn:", actions)
